@@ -3,30 +3,44 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 )
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	// fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 	doc := Document{Name: "Yandry", Size: 260}
 	json.NewEncoder(w).Encode(doc)
 }
 
 func FileUpload(w http.ResponseWriter, r *http.Request) {
 
-	if r.MultipartForm != nil {
-		for _, fileHeaders := range r.MultipartForm.File {
-			for _, fileHeader := range fileHeaders {
-				file, _ := fileHeader.Open()
-				path := fmt.Sprintf("files/%s", fileHeader.Filename)
-				buf, _ := ioutil.ReadAll(file)
-				ioutil.WriteFile(path, buf, os.ModePerm)
-			}
-			fmt.Println("Files founds **************")
-		}
+	file, header, err := r.FormFile("docfile")
+
+	if err != nil {
+		fmt.Println("[-] Error in r.FormFile ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "[-] Error in r.FormFile ", err)
+		return
+	}
+	defer file.Close()
+
+	out, err := os.Create("uploaded-" + header.Filename)
+	if err != nil {
+		fmt.Println("[-] Unable to create the file for writing. Check your write access privilege.", err)
+		fmt.Fprintf(w, "[-] Unable to create the file for writing. Check your write access privilege.", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	defer out.Close()
+
+	// write the content from POST to the file
+	_, err = io.Copy(out, file)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Fprintf(w, "Fail on io.Copy", err)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	w.WriteHeader(http.StatusAccepted)
+	fmt.Println("[+] File uploaded successfully: ")
+	fmt.Println("uploaded-" + header.Filename)
 }

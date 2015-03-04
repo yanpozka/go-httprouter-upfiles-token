@@ -40,4 +40,5 @@ _testmain.go
 *.test
 *.prof
 
+uploaded-gitignore
 
