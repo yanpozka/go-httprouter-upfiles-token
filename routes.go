@@ -13,15 +13,9 @@ type Routes []Route
 
 var routes = Routes{
 	Route{
-		"index",
-		"GET",
-		"/",
-		Index,
+		"index", "GET", "/", Index,
 	},
 	Route{
-		"file-upload",
-		"POST",
-		"/file",
-		FileUpload,
+		"file-upload", "POST", "/file", FileUpload,
 	},
 }

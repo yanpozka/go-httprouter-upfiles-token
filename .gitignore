@@ -41,4 +41,6 @@ _testmain.go
 *.prof
 
 uploaded-gitignore
+*
+.swp
 
