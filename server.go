@@ -9,12 +9,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const PORT = ":8080"
+
 //
 func main() {
 
-	fmt.Println("[+] Init webserver")
+	fmt.Println("[+] Init webserver", PORT)
 
-	log.Fatal(http.ListenAndServe(":8080", ConfigRouters()))
+	log.Fatal(http.ListenAndServe(PORT, ConfigRouters()))
 }
 
 //
@@ -38,7 +40,7 @@ func ConfigRouters() *mux.Router {
 		var handler http.Handler = Logger(route.HandlerFunc, route.Name)
 
 		router.
-			Methods(route.Methods).
+			Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
 			Handler(handler)

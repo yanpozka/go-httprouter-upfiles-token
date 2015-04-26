@@ -20,7 +20,7 @@ func FileUpload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("[-] Error in r.FormFile ", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "[-] Error in r.FormFile ", err)
+		fmt.Fprintf(w, "{'error': %s}", err)
 		return
 	}
 	defer file.Close()

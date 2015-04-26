@@ -37,7 +37,7 @@ func TestUploadFile(t *testing.T) {
 	file_to_upload, errf := os.Open(".gitignore")
 
 	if errf != nil {
-		t.Fatal("[-] Fail to open './document.go'", errf)
+		t.Fatal("[-] Fail to open file to upload.", errf)
 	}
 	defer file_to_upload.Close()
 
@@ -54,8 +54,7 @@ func TestUploadFile(t *testing.T) {
 	// if we want more parameters to send
 	// for key, val := range params { _ = writer.WriteField(key, val) }*/
 
-	err = writer.Close()
-	if err != nil {
+	if err := writer.Close(); err != nil {
 		t.Fatal("[-] Fail to writer.Close()", err)
 	}
 
