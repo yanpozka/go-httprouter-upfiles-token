@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
 
 const PORT = ":8080"
@@ -32,18 +32,13 @@ func Logger(inner http.Handler, name string) http.Handler {
 }
 
 //
-func ConfigRouters() *mux.Router {
-
-	router := mux.NewRouter().StrictSlash(true)
+func ConfigRouters() *httprouter.Router {
+	router := httprouter.New()
 
 	for _, route := range routes {
 		var handler http.Handler = Logger(route.HandlerFunc, route.Name)
 
-		router.
-			Methods(route.Method).
-			Path(route.Pattern).
-			Name(route.Name).
-			Handler(handler)
+		router.Handler(route.Method, route.Pattern, handler)
 	}
 
 	return router
