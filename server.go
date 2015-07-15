@@ -1,34 +1,58 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
-	"time"
+	"runtime/debug"
 
 	"github.com/julienschmidt/httprouter"
 )
 
 const PORT = ":8080"
 
-//
-func main() {
+// Interface for any router: httprouter, gorilla-mux, etc.
+type HttpRouter interface {
+	http.Handler
+}
 
-	fmt.Println("[+] Init webserver", PORT)
+type MiddlewareHandler struct {
+	Middlewares []CommonMiddleware
+	router      HttpRouter
+}
 
-	log.Fatal(http.ListenAndServe(PORT, ConfigRouters()))
+func (mw *MiddlewareHandler) ServeHTTP(resw http.ResponseWriter, req *http.Request) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[+] Recovering: %+v\nrequest: %+v", r, req)
+			debug.PrintStack()
+			http.Error(resw, `{"error":"internal"}`, http.StatusInternalServerError)
+		}
+	}()
+
+	for _, f_mw := range mw.Middlewares {
+		if err := f_mw(resw, req); err != nil {
+			return
+		}
+	}
+
+	if mw.router == nil {
+		panic("[-] Missing main router.")
+	}
+
+	mw.router.ServeHTTP(resw, req) // !!
 }
 
 //
-// https://github.com/corylanou/tns-restful-json-api/blob/master/v9/logger.go
-//
-func Logger(inner http.Handler, name string) http.Handler {
+func main() {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		inner.ServeHTTP(w, r)
-		log.Printf("%s\t%s\t%s\t%s", r.Method, r.RequestURI, name, time.Since(start))
-	})
+	// Logger, Common Headers middlewares
+	mdws := []CommonMiddleware{CommonHeaders}
+
+	mwhanderl := &MiddlewareHandler{Middlewares: mdws, router: ConfigRouters()}
+
+	log.Printf("[+] Starting server in %s\n", PORT)
+	log.Fatal(http.ListenAndServe(PORT, mwhanderl))
 }
 
 //
@@ -38,7 +62,8 @@ func ConfigRouters() *httprouter.Router {
 	for _, route := range routes {
 		var handler http.Handler = Logger(route.HandlerFunc, route.Name)
 
-		router.Handler(route.Method, route.Pattern, handler)
+		router.Handler(route.Method, route.Path, handler)
+		log.Printf("[+] Registred endpoint %s: %s (%s)", route.Method, route.Path, route.Name)
 	}
 
 	return router

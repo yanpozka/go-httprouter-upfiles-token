@@ -8,11 +8,17 @@ import (
 	"os"
 )
 
+// TODO:
+func GenerateSecurityToken(w http.ResponseWriter, r *http.Request) {
+}
+
+//
 func Index(w http.ResponseWriter, r *http.Request) {
 	doc := Document{Name: "Yandry", Size: 260}
 	json.NewEncoder(w).Encode(doc)
 }
 
+//
 func FileUpload(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("docfile")
