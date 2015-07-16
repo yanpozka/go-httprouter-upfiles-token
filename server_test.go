@@ -9,30 +9,66 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
+var mrouter HttpRouter
+
+//
+func init() {
+	mrouter = newApp()
+}
+
+//
+func TestAccessToken(t *testing.T) {
+	respRec := httptest.NewRecorder()
+
+	req, err := http.NewRequest("GET", "/access-token", nil)
+	if err != nil {
+		t.Fatal("Creating GET '/' request failed!")
+	}
+
+	mrouter.ServeHTTP(respRec, req)
+
+	if respRec.Code != http.StatusOK {
+		t.Fatal("Server error: Returned ", respRec.Code, " instead of ", http.StatusOK)
+	}
+
+	if !strings.Contains(respRec.Body.String(), `"token":`) {
+		t.Fatalf("[-] Has to Contains token field")
+	}
+	t.Log(respRec.Body.String())
+}
+
 //
 func TestEchosContent(t *testing.T) {
-	mrouter := ConfigRouters()
-	respRecorder := httptest.NewRecorder()
+	respRec := httptest.NewRecorder()
 
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal("Creating GET '/' request failed!")
 	}
 
-	mrouter.ServeHTTP(respRecorder, req)
+	mrouter.ServeHTTP(respRec, req)
 
-	if respRecorder.Code != http.StatusOK {
-		t.Fatal("Server error: Returned ", respRecorder.Code, " instead of ", http.StatusOK)
+	if respRec.Code != http.StatusOK {
+		t.Fatal("Server error: Returned ", respRec.Code, " instead of ", http.StatusOK)
 	}
-	// fmt.Println("[+] Response: ", respRecorder.Body)
+
+	header := respRec.HeaderMap
+	expectedHeaders := []string{"Content-Type", "X-Powered-By", "Server"}
+
+	for _, chr := range expectedHeaders {
+		if _, found := header[chr]; !found {
+			t.Logf("[-] Not found expected header '%s'. Header: %v", chr, header)
+		}
+	}
+	fmt.Println("[+] Response: ", respRec.Body)
 }
 
 //
 func TestUploadFile(t *testing.T) {
-	mrouter := ConfigRouters()
 	respRecorder := httptest.NewRecorder()
 	file_to_upload, errf := os.Open(".gitignore")
 
@@ -70,5 +106,5 @@ func TestUploadFile(t *testing.T) {
 		t.Fatal("[-] Server error: Returned [", respRecorder.Code, "] instead of [", http.StatusOK, "]")
 	}
 
-	fmt.Println("Code :", respRecorder.Code)
+	t.Log("Code :", respRecorder.Code)
 }

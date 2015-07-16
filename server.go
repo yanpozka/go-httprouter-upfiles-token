@@ -45,14 +45,19 @@ func (mw *MiddlewareHandler) ServeHTTP(resw http.ResponseWriter, req *http.Reque
 
 //
 func main() {
+	log.Printf("[+] Starting server in %s\n", PORT)
+
+	log.Fatal(http.ListenAndServe(PORT, newApp()))
+}
+
+func newApp() *MiddlewareHandler {
 
 	// Logger, Common Headers middlewares
 	mdws := []CommonMiddleware{CommonHeaders}
 
 	mwhanderl := &MiddlewareHandler{Middlewares: mdws, router: ConfigRouters()}
 
-	log.Printf("[+] Starting server in %s\n", PORT)
-	log.Fatal(http.ListenAndServe(PORT, mwhanderl))
+	return mwhanderl
 }
 
 //

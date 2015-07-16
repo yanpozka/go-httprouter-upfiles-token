@@ -1,15 +1,33 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-// TODO:
+// TODO: add Basic Auth to this endpoint
 func GenerateSecurityToken(w http.ResponseWriter, r *http.Request) {
+	buffrand := make([]byte, 65)
+
+	if _, err := rand.Read(buffrand); err != nil {
+		log.Println("[-] Error trying to generate random string.", err)
+		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: create a separated function to create hash
+	hasher512 := sha512.New()
+	var rs string = fmt.Sprintf("%s-%d-%s", r.RemoteAddr, time.Now().UnixNano(), string(buffrand))
+	data := hasher512.Sum([]byte(rs))
+
+	fmt.Fprintf(w, `{"token": "%x"}`, data)
 }
 
 //
@@ -24,7 +42,7 @@ func FileUpload(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("docfile")
 
 	if err != nil {
-		fmt.Println("[-] Error in r.FormFile ", err)
+		log.Println("[-] Error in r.FormFile ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "{'error': %s}", err)
 		return
@@ -33,7 +51,7 @@ func FileUpload(w http.ResponseWriter, r *http.Request) {
 
 	out, err := os.Create("uploaded-" + header.Filename)
 	if err != nil {
-		fmt.Println("[-] Unable to create the file for writing. Check your write access privilege.", err)
+		log.Println("[-] Unable to create the file for writing. Check your write access privilege.", err)
 		fmt.Fprintf(w, "[-] Unable to create the file for writing. Check your write access privilege.", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
@@ -42,11 +60,10 @@ func FileUpload(w http.ResponseWriter, r *http.Request) {
 	// write the content from POST to the file
 	_, err = io.Copy(out, file)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Fprintf(w, "Fail on io.Copy", err)
+		log.Println("[-] Error copying file.", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	fmt.Println("[+] File uploaded successfully: ")
-	fmt.Println("uploaded-" + header.Filename)
+	log.Println("[+] File uploaded successfully: uploaded-", header.Filename)
 }
