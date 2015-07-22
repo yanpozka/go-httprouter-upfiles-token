@@ -21,7 +21,8 @@ var routes = Routes{
 	Route{
 		"file-upload", "POST", "/file", FileUpload,
 	},
-	Route{
-		"generate-token", "GET", "/access-token", GenerateSecurityToken,
-	},
+}
+
+var rat = Route{
+	"generate-token", "GET", "/access-token", GenerateSecurityToken,
 }

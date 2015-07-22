@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// keep in memory all tokens
+var _tokens_ = make(map[string]bool)
+
 // TODO: add Basic Auth to this endpoint
 func GenerateSecurityToken(w http.ResponseWriter, r *http.Request) {
 	buffrand := make([]byte, 65)
@@ -27,7 +30,11 @@ func GenerateSecurityToken(w http.ResponseWriter, r *http.Request) {
 	var rs string = fmt.Sprintf("%s-%d-%s", r.RemoteAddr, time.Now().UnixNano(), string(buffrand))
 	data := hasher512.Sum([]byte(rs))
 
-	fmt.Fprintf(w, `{"token": "%x"}`, data)
+	var token string = fmt.Sprintf("%x", data)
+
+	_tokens_[token] = true
+
+	fmt.Fprintf(w, `{"token": "%s"}`, token)
 }
 
 //

@@ -15,11 +15,13 @@ type HttpRouter interface {
 	http.Handler
 }
 
+//
 type MiddlewareHandler struct {
 	Middlewares []CommonMiddleware
 	router      HttpRouter
 }
 
+//
 func (mw *MiddlewareHandler) ServeHTTP(resw http.ResponseWriter, req *http.Request) {
 
 	defer func() {
@@ -50,6 +52,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(PORT, newApp()))
 }
 
+//
 func newApp() *MiddlewareHandler {
 
 	// Logger, Common Headers middlewares
@@ -65,11 +68,14 @@ func ConfigRouters() *httprouter.Router {
 	router := httprouter.New()
 
 	for _, route := range routes {
-		var handler http.Handler = Logger(route.HandlerFunc, route.Name)
+		var handler http.Handler = Logger(TokenAccessVerification(route.HandlerFunc), route.Name)
 
 		router.Handler(route.Method, route.Path, handler)
 		log.Printf("[+] Registred endpoint %s: %s (%s)", route.Method, route.Path, route.Name)
 	}
+	// access-token endpoint
+	router.Handler(rat.Method, rat.Path, Logger(rat.HandlerFunc, rat.Name))
+	log.Printf("[+] Registred endpoint %s: %s (%s)", rat.Method, rat.Path, rat.Name)
 
 	return router
 }

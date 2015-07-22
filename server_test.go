@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -13,32 +14,50 @@ import (
 	"testing"
 )
 
-var mrouter HttpRouter
+//
+var (
+	mrouter    HttpRouter
+	token_hash string
+)
 
 //
 func init() {
 	mrouter = newApp()
+
+	resp := _getToken(false, nil)
+
+	var tr = &struct {
+		Token string `json:"token"`
+	}{}
+
+	if err := json.Unmarshal(resp, tr); err != nil {
+		panic(fmt.Sprintf("[-] Error trying to decode token response. %v", err))
+	}
+	token_hash = tr.Token
 }
 
 //
 func TestAccessToken(t *testing.T) {
+	if !strings.Contains(string(_getToken(true, t)), `"token":`) {
+		t.Fatalf("[-] Has to Contains token field")
+	}
+}
+
+//
+func _getToken(check bool, t *testing.T) []byte {
 	respRec := httptest.NewRecorder()
 
 	req, err := http.NewRequest("GET", "/access-token", nil)
-	if err != nil {
+	if check && err != nil {
 		t.Fatal("Creating GET '/' request failed!")
 	}
 
 	mrouter.ServeHTTP(respRec, req)
 
-	if respRec.Code != http.StatusOK {
+	if check && respRec.Code != http.StatusOK {
 		t.Fatal("Server error: Returned ", respRec.Code, " instead of ", http.StatusOK)
 	}
-
-	if !strings.Contains(respRec.Body.String(), `"token":`) {
-		t.Fatalf("[-] Has to Contains token field")
-	}
-	t.Log(respRec.Body.String())
+	return respRec.Body.Bytes()
 }
 
 //
@@ -49,6 +68,7 @@ func TestEchosContent(t *testing.T) {
 	if err != nil {
 		t.Fatal("Creating GET '/' request failed!")
 	}
+	req.Header.Add("Authorization", "Token "+token_hash)
 
 	mrouter.ServeHTTP(respRec, req)
 
@@ -99,6 +119,7 @@ func TestUploadFile(t *testing.T) {
 		t.Fatal("[-] Creating POST '/file' request failed!")
 	}
 	req.Header.Add("Content-Type", writer.FormDataContentType()) // BLOODY LINE OF CODE
+	req.Header.Add("Authorization", "Token "+token_hash)
 
 	mrouter.ServeHTTP(respRecorder, req)
 
