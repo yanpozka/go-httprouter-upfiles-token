@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	auth "github.com/abbot/go-http-auth"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -67,14 +68,18 @@ func newApp() *MiddlewareHandler {
 func ConfigRouters() *httprouter.Router {
 	router := httprouter.New()
 
+	ar := auth.NewBasicAuthenticator("localhost", ValidateBasicAuth)
+
 	for _, route := range routes {
 		var handler http.Handler = Logger(TokenAccessVerification(route.HandlerFunc), route.Name)
 
 		router.Handler(route.Method, route.Path, handler)
 		log.Printf("[+] Registred endpoint %s: %s (%s)", route.Method, route.Path, route.Name)
 	}
+
 	// access-token endpoint
-	router.Handler(rat.Method, rat.Path, Logger(rat.HandlerFunc, rat.Name))
+	router.Handler(rat.Method, rat.Path, Logger(ar.Wrap(GenerateSecurityToken), rat.Name))
+
 	log.Printf("[+] Registred endpoint %s: %s (%s)", rat.Method, rat.Path, rat.Name)
 
 	return router

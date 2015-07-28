@@ -24,5 +24,5 @@ var routes = Routes{
 }
 
 var rat = Route{
-	"generate-token", "GET", "/access-token", GenerateSecurityToken,
+	"generate-token", "GET", "/access-token", nil,
 }

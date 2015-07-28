@@ -24,7 +24,11 @@ var (
 func init() {
 	mrouter = newApp()
 
-	resp := _getToken(false, nil)
+	resp, err := _getToken()
+	if err != nil {
+		panic(fmt.Sprintf("Imposible create Token. %s", err))
+		return
+	}
 
 	var tr = &struct {
 		Token string `json:"token"`
@@ -38,26 +42,33 @@ func init() {
 
 //
 func TestAccessToken(t *testing.T) {
-	if !strings.Contains(string(_getToken(true, t)), `"token":`) {
+	token, err := _getToken()
+	if err != nil {
+		t.Fatalf("Error getting Access-Token. %v\n", err)
+	}
+
+	if !strings.Contains(string(token), `"token":`) {
 		t.Fatalf("[-] Has to Contains token field")
 	}
 }
 
 //
-func _getToken(check bool, t *testing.T) []byte {
+func _getToken() ([]byte, error) {
 	respRec := httptest.NewRecorder()
 
 	req, err := http.NewRequest("GET", "/access-token", nil)
-	if check && err != nil {
-		t.Fatal("Creating GET '/' request failed!")
+	if err != nil {
+		return nil, fmt.Errorf("[-] Creating GET '/' request failed!")
 	}
+	req.SetBasicAuth("yandry", "hello") // !!
 
 	mrouter.ServeHTTP(respRec, req)
 
-	if check && respRec.Code != http.StatusOK {
-		t.Fatal("Server error: Returned ", respRec.Code, " instead of ", http.StatusOK)
+	if respRec.Code != http.StatusOK {
+		return nil, fmt.Errorf("Returned code %d instead of %d. Server says: %s",
+			respRec.Code, http.StatusOK, respRec.Body.String())
 	}
-	return respRec.Body.Bytes()
+	return respRec.Body.Bytes(), nil
 }
 
 //

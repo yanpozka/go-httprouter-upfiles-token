@@ -5,6 +5,7 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
+	auth "github.com/abbot/go-http-auth"
 	"io"
 	"log"
 	"net/http"
@@ -16,9 +17,10 @@ import (
 var _tokens_ = make(map[string]bool)
 
 // TODO: add Basic Auth to this endpoint
-func GenerateSecurityToken(w http.ResponseWriter, r *http.Request) {
+func GenerateSecurityToken(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
 	buffrand := make([]byte, 65)
 
+	r := req.Request
 	if _, err := rand.Read(buffrand); err != nil {
 		log.Println("[-] Error trying to generate random string.", err)
 		http.Error(w, `{"error":"internal"}`, http.StatusInternalServerError)
