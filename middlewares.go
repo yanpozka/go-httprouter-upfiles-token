@@ -3,9 +3,41 @@ package main
 import (
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 )
+
+//
+type MiddlewareHandler struct {
+	Middlewares []CommonMiddleware
+	router      HttpRouter
+}
+
+//
+func (mw *MiddlewareHandler) ServeHTTP(resw http.ResponseWriter, req *http.Request) {
+
+	// custom recovery, it seems deferPanic client recovers first
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[+] Recovering: %+v\nrequest: %+v", r, req)
+			debug.PrintStack()
+			http.Error(resw, `{"error":"internal"}`, http.StatusInternalServerError)
+		}
+	}()
+
+	for _, f_mw := range mw.Middlewares {
+		if err := f_mw(resw, req); err != nil {
+			return
+		}
+	}
+
+	if mw.router == nil {
+		panic("[-] Missing main router.")
+	}
+
+	mw.router.ServeHTTP(resw, req) // !!
+}
 
 //
 type CommonMiddleware func(http.ResponseWriter, *http.Request) error

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"runtime/debug"
+	"os"
+	"time"
 
 	auth "github.com/abbot/go-http-auth"
+	"github.com/deferpanic/deferclient/deferstats"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -17,36 +20,6 @@ type HttpRouter interface {
 }
 
 //
-type MiddlewareHandler struct {
-	Middlewares []CommonMiddleware
-	router      HttpRouter
-}
-
-//
-func (mw *MiddlewareHandler) ServeHTTP(resw http.ResponseWriter, req *http.Request) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("[+] Recovering: %+v\nrequest: %+v", r, req)
-			debug.PrintStack()
-			http.Error(resw, `{"error":"internal"}`, http.StatusInternalServerError)
-		}
-	}()
-
-	for _, f_mw := range mw.Middlewares {
-		if err := f_mw(resw, req); err != nil {
-			return
-		}
-	}
-
-	if mw.router == nil {
-		panic("[-] Missing main router.")
-	}
-
-	mw.router.ServeHTTP(resw, req) // !!
-}
-
-//
 func main() {
 	log.Printf("[+] Starting server in %s\n", PORT)
 
@@ -54,12 +27,39 @@ func main() {
 }
 
 //
-func newApp() *MiddlewareHandler {
+// DeferPanic examples
+//
+func panicHandler(w http.ResponseWriter, r *http.Request) {
+	panic("there is no need to PANIC")
+}
 
+func fastHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "this request is FAST")
+}
+
+func slowHandler(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(2 * time.Second)
+	fmt.Fprintf(w, "this request is SLOW")
+}
+
+//
+func newApp() *MiddlewareHandler {
 	// Logger, Common Headers middlewares
 	mdws := []CommonMiddleware{CommonHeaders}
 
-	mwhanderl := &MiddlewareHandler{Middlewares: mdws, router: ConfigRouters()}
+	router := ConfigRouters()
+
+	if os.Getenv("IS_TESTING") == "" {
+		dps := deferstats.NewClient(os.Getenv("DEFERPANIC_API_KEY"))
+
+		go dps.CaptureStats()
+
+		router.Handler("GET", "/fast", dps.HTTPHandlerFunc(fastHandler))
+		router.Handler("GET", "/slow", dps.HTTPHandlerFunc(slowHandler))
+		router.Handler("GET", "/panic", dps.HTTPHandlerFunc(panicHandler))
+	}
+
+	mwhanderl := &MiddlewareHandler{Middlewares: mdws, router: router}
 
 	return mwhanderl
 }

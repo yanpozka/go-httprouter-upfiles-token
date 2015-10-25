@@ -21,7 +21,11 @@ var (
 )
 
 //
+// It should be more convenient a TestMain()
+//
 func init() {
+	os.Setenv("IS_TESTING", "true")
+
 	mrouter = newApp()
 
 	resp, err := _getToken()
